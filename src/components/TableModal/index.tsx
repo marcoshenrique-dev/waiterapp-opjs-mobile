@@ -16,6 +16,7 @@ export function TableModal({visible, onClose, onSave}: ITableModalProps) {
   const [table, setTable] = useState('');
 
   function handleSave(table: string) {
+    setTable('');
     onSave(table);
     onClose();
   }
@@ -33,7 +34,7 @@ export function TableModal({visible, onClose, onSave}: ITableModalProps) {
           </Header>
 
           <Form>
-            <Input keyboardType='number-pad' placeholder='Número da mesa' placeholderTextColor='#666' onChangeText={setTable}/>
+            <Input keyboardType='number-pad' placeholder='Número da mesa' placeholderTextColor='#666' value={table} onChangeText={setTable}/>
             <Button disabled={table.length === 0} onPress={() => handleSave(table)}>Salvar</Button>
           </Form>
 

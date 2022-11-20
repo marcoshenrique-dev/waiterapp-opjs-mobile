@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../utils/api';
 import { ActivityIndicator } from 'react-native';
 
 import { Button } from '../components/Button';
@@ -10,24 +11,57 @@ import { Menu } from '../components/Menu';
 import { TableModal } from '../components/TableModal';
 import { Text } from '../components/Text';
 
-import { products as MockProducts } from '../mocks/products';
-
 import { CartItem } from '../types/CartItem';
 import { Product } from '../types/Product';
 
+
 import { Container, FooterContainer, CategoriesContainer,MenuContainer, Footer, CenteredContainer } from './styles';
+import { Category } from '../types/Category';
+
+
 
 function Main() {
 
   const [isTableModalVisible, setIsTableModalVisible] = useState(false);
   const [selectedTable, setSelectedTable] = useState('');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [products, setMockProducts] = useState<Product[]>(MockProducts);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+
+    Promise.all([
+      api.get('/categories'),
+      api.get('/products')])
+      .then(([categoriesResponse, productsResponse]) => {
+        setCategories(categoriesResponse.data);
+        setProducts(productsResponse.data);
+        setIsLoading(false);
+      });
+
+
+
+  }, []);
 
   function handleSaveTable(table: string) {
     setSelectedTable(table);
     setIsTableModalVisible(false);
+  }
+
+  async function handleSelectCategory(categoryId: string) {
+
+    const route = !categoryId
+      ? '/products'
+      : `/categories/${categoryId}/products`;
+
+    setIsLoadingProducts(true);
+
+    const { data } = await api.get(route);
+
+    setProducts(data);
+    setIsLoadingProducts(false);
   }
 
   function handleResetOrder() {
@@ -107,21 +141,31 @@ function Main() {
             (
               <>
                 <CategoriesContainer>
-                  <Categories />
+                  <Categories onSelectCategory={handleSelectCategory} categories={categories}/>
                 </CategoriesContainer>
 
-                {
-                  products.length > 0 ? (
-                    <MenuContainer>
-                      <Menu products={products} onAddToCart={handleAddToCart}/>
-                    </MenuContainer>
-                  ) : (
-                    <CenteredContainer>
-                      <Empty />
-                      <Text color='#666' style={{marginTop: 24}}>Nenhum produto foi encontrado!</Text>
-                    </CenteredContainer>
-                  )
-                }
+                {isLoadingProducts ? (
+                  <CenteredContainer>
+                    <ActivityIndicator color='#D73035' size='large'/>
+                  </CenteredContainer>
+                ): (
+                  <>
+                    {
+                      products.length > 0 ? (
+                        <MenuContainer>
+                          <Menu products={products} onAddToCart={handleAddToCart}/>
+                        </MenuContainer>
+                      ) : (
+                        <CenteredContainer>
+                          <Empty />
+                          <Text color='#666' style={{marginTop: 24}}>Nenhum produto foi encontrado!</Text>
+                        </CenteredContainer>
+                      )
+                    }
+                  </>
+                )}
+
+
               </>
             )
         }
@@ -140,7 +184,7 @@ function Main() {
 
           {
             selectedTable && (
-              <Cart onConfirmOrder={handleResetOrder} onDrecement={handleDecrementCartItem} onAdd={handleAddToCart} cartItems={cartItems}/>
+              <Cart selectedTable={selectedTable} onConfirmOrder={handleResetOrder} onDrecement={handleDecrementCartItem} onAdd={handleAddToCart} cartItems={cartItems}/>
             )
           }
         </FooterContainer>
